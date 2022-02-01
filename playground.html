@@ -1,0 +1,456 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<title>Box playground</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<style>
+		body {
+			margin: 0;
+			overflow: hidden;
+		}
+
+		canvas {
+			width: 100%;
+			height: 100%;
+		}
+	</style>
+</head>
+
+<body>
+	<script src="three-r134.js"></script>
+	<script src="OBJLoader.js"></script>
+	<script>
+
+		var camera, scene, renderer, mesh, cube, edgeRendering, pointsRendering, disco, littleSphere1, littleSphere2, bunny, littleBunny;
+		var xRotate = 0, yRotate = 0, zRotate = 0, escapeRate = 0.1, cubeSpeed = 0.15, cubeOrigPos;
+		var discoBall = false, discoBallColoured = true;
+		var defColours = [0x0000ff, 0x088a2b, 0xff00e4, 0xfff000, 0xff0000, 0xc100ff];
+		var bunnyEdgeRendering, bunnyPointsRendering;
+
+		// Initialise the scene, and draw it for the first time.
+		init();
+		animate();
+
+		// Listen for keyboard events, to react to them.
+		document.addEventListener('keydown', handleKeyDown);
+
+		function init() {
+			scene = new THREE.Scene();
+
+			// Set up the camera, move it to (3, 4, 5) and look at the origin (0, 0, 0).
+			camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+			camera.position.set(3, 4, 5);
+			camera.lookAt(new THREE.Vector3(0, 0, 0));
+			// Draw a helper grid in the x-z plane (note: y is up).
+			scene.add(new THREE.GridHelper(10, 20, 0xffffff));
+
+			// Select textures
+			let texture1 = new THREE.TextureLoader().load("./texture1.png");
+			let texture2 = new THREE.TextureLoader().load("./texture2.png");
+			let texture3 = new THREE.TextureLoader().load("./texture3.png");
+			let texture4 = new THREE.TextureLoader().load("./texture4.png");
+			let texture5 = new THREE.TextureLoader().load("./texture5.png");
+			let texture6 = new THREE.TextureLoader().load("./texture6.png");
+
+
+			const cubeMaterials = [ // Create the material for the cube
+				new THREE.MeshBasicMaterial({
+					map: texture1
+				}),
+				new THREE.MeshBasicMaterial({
+					map: texture2
+				}),
+				new THREE.MeshBasicMaterial({
+					map: texture3
+				}),
+				new THREE.MeshBasicMaterial({
+					map: texture4
+				}),
+				new THREE.MeshBasicMaterial({
+					map: texture5
+				}),
+				new THREE.MeshBasicMaterial({
+					map: texture6
+				})
+			];
+			const cubeGeometry = new THREE.BoxGeometry(2, 2, 2); // Create a new cube geometry
+			cube = new THREE.Mesh(cubeGeometry, cubeMaterials); // Create the mesh using the geometry and material created
+			scene.add(cube); // Add the mesh to the scene.
+			cubeOrigPos = cube.position;
+
+			// Create a disco ball and 2 spheres
+			const sphereGeometry = new THREE.SphereGeometry();
+			const sphereMaterial = new THREE.MeshBasicMaterial();
+			disco = new THREE.Mesh(sphereGeometry, sphereMaterial);
+			disco.translateY(3);
+
+			const sphere2Geometry = new THREE.SphereGeometry(0.5);
+			const sphere2Material = new THREE.MeshBasicMaterial();
+			littleSphere1 = new THREE.Mesh(sphere2Geometry, sphere2Material);
+			littleSphere1.translateX(-1);
+
+			const sphere3Geometry = new THREE.SphereGeometry(0.5);
+			const sphere3Material = new THREE.MeshBasicMaterial();
+			littleSphere2 = new THREE.Mesh(sphere3Geometry, sphere3Material);
+			littleSphere2.translateX(1);
+
+			// Load bunny
+			const objLoader = new THREE.OBJLoader();
+			objLoader.load('bunny-5000.obj',
+					function (bunnyObj) {
+						const bunnyGeometry = bunnyObj.children[0]['geometry'];
+						const bunnyMaterial = new THREE.MeshPhongMaterial({color: 0xff00e4, flatShading: true});
+						bunny = new THREE.Mesh(bunnyGeometry, bunnyMaterial);
+						bunny.geometry.center();
+						bunny.scale.setScalar(0.4);
+						scene.add(bunny);
+						// Edges
+						const bunnyEdges = new THREE.EdgesGeometry(bunny.geometry);
+						bunnyEdgeRendering = new THREE.LineSegments(bunnyEdges, new THREE.LineBasicMaterial({color: 0xff00e4}));
+						bunnyEdgeRendering.visible = false;
+						bunnyEdgeRendering.geometry.center();
+						bunnyEdgeRendering.scale.setScalar(0.4);
+						scene.add(bunnyEdgeRendering);
+						// Vertices
+						bunnyPointsRendering = new THREE.Points(bunny.geometry, new THREE.PointsMaterial({color: 0xff00e4, size: 0.01}));
+						bunnyPointsRendering.visible = false;
+						bunnyPointsRendering.scale.setScalar(0.4);
+						scene.add(bunnyPointsRendering);
+					}
+			);
+			bunny = objLoader.parse("");
+
+			// Load bunny
+			const objLoader2 = new THREE.OBJLoader();
+			objLoader2.load('bunny-5000.obj',
+					function (bunnyObj) {
+						const bunnyGeometry = bunnyObj.children[0]['geometry'];
+						const bunnyMaterial = new THREE.MeshPhongMaterial({color: 0xff00e4, flatShading: true});
+						littleBunny = new THREE.Mesh(bunnyGeometry, bunnyMaterial);
+						littleBunny.geometry.center();
+						littleBunny.scale.setScalar(0.225);
+					}
+			);
+			littleBunny = objLoader2.parse("");
+
+			// Edges
+			const edges = new THREE.EdgesGeometry(cubeGeometry); // Edges of the cube's geometry
+			edgeRendering = new THREE.LineSegments(edges, new THREE.LineBasicMaterial()); // Create the lines
+			edgeRendering.visible = false; // Set default to invisible
+			scene.add(edgeRendering);
+
+			// Vertices
+			pointsRendering = new THREE.Points(cubeGeometry, new THREE.PointsMaterial({size: 0.1}));
+			pointsRendering.visible = false;
+			scene.add(pointsRendering);
+
+			// x
+			let lineMaterial = new THREE.LineBasicMaterial({color: 0xff0000}); // Red line material
+			let points = [];
+			points.push(new THREE.Vector3(-5, 0, 0));
+			points.push(new THREE.Vector3(5, 0, 0));
+			let lineGeometry = new THREE.BufferGeometry().setFromPoints(points); // Size of 10
+			let line = new THREE.Line(lineGeometry, lineMaterial);
+			scene.add(line);
+
+			// y
+			lineMaterial = new THREE.LineBasicMaterial({color: 0x00ff00}); // Green line material
+			points = [];
+			points.push(new THREE.Vector3(0, -5, 0));
+			points.push(new THREE.Vector3(0, 5, 0));
+			lineGeometry = new THREE.BufferGeometry().setFromPoints(points); // Size of 10
+			line = new THREE.Line(lineGeometry, lineMaterial);
+			scene.add(line);
+
+			// z
+			lineMaterial = new THREE.LineBasicMaterial({color: 0x0000ff}); // Blue line material
+			points = [];
+			points.push(new THREE.Vector3(0, 0, -5));
+			points.push(new THREE.Vector3(0, 0, 5));
+			lineGeometry = new THREE.BufferGeometry().setFromPoints(points); // Size of 10
+			line = new THREE.Line(lineGeometry, lineMaterial);
+			scene.add(line);
+
+			// Basic ambient lighting.
+			// scene.add(new THREE.AmbientLight(0xffffff));
+			let cubeDirectionalLight = new THREE.DirectionalLight(0xffffff, 3); // White light
+			cubeDirectionalLight.position.set(0, 1, 0); // Set at (0, 1, 0)
+			cubeDirectionalLight.target = cube; // Make the cube the target, so the cube is always lit up regardless of its position
+			scene.add(cubeDirectionalLight); // Add the light to the scene
+
+			let bunnyDirectionalLight = new THREE.DirectionalLight(0x000fff, 5);
+			bunnyDirectionalLight.position.set(0, 1, 0);
+			bunnyDirectionalLight.target = bunny;
+			scene.add(bunnyDirectionalLight);
+
+			let discoBallLight = new THREE.DirectionalLight(0xffffff, 5);
+			discoBallLight.position.set(0, 3, 0);
+			discoBallLight.target = disco;
+			scene.add(discoBallLight);
+
+			let littleBunnyLight = new THREE.DirectionalLight(0x000fff, 3);
+			littleBunnyLight.position.set(0, 1, 0);
+			littleBunnyLight.target = littleBunny;
+			scene.add(littleBunnyLight);
+
+			// Set up the Web GL renderer.
+			renderer = new THREE.WebGLRenderer({ antialias: true });
+			renderer.setPixelRatio(window.devicePixelRatio); // HiDPI/retina rendering
+			renderer.setSize(window.innerWidth, window.innerHeight);
+			document.body.appendChild(renderer.domElement);
+			// Handle resizing of the browser window.
+			window.addEventListener('resize', handleResize, false);
+		}
+
+		// Handle resizing of the browser window.
+		function handleResize() {
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+			renderer.setSize(window.innerWidth, window.innerHeight);
+		}
+
+		// Animation loop function
+		function animate() {
+			requestAnimationFrame(animate);
+			cube.rotation.x += xRotate;
+			edgeRendering.rotation.x += xRotate;
+			pointsRendering.rotation.x += xRotate;
+			bunny.rotation.x += xRotate;
+
+			cube.rotation.y += yRotate;
+			edgeRendering.rotation.y += yRotate;
+			pointsRendering.rotation.y += yRotate;
+			bunny.rotation.y += yRotate;
+
+			cube.rotation.z += zRotate;
+			edgeRendering.rotation.z += zRotate;
+			pointsRendering.rotation.z += zRotate;
+			bunny.rotation.z += zRotate;
+
+			// Disco ball
+			if (discoBall) {
+				activateDiscoBall();
+			}
+			// Render the current scene to the screen.
+			renderer.render(scene, camera);
+		}
+
+		// Handle keyboard presses.
+		function handleKeyDown(event) {
+			switch (event.key) {
+				// Render modes.
+				case 'f': // f = face
+				// Toggle system. Upon toggling on, the faces are shown. Upon toggling off, the edges are shown.
+					if (!cube.visible) { // If the faces aren't being shown,
+						cube.visible = true; // Show the faces
+						edgeRendering.visible = false; // Make the edges invisible
+						pointsRendering.visible = false; // Make the vertices invisible
+
+						bunny.visible = true;
+						bunnyEdgeRendering.visible = false;
+						bunnyPointsRendering.visible = false;
+						break;
+					}
+					cube.visible = false; // Otherwise, make the faces invisible
+					edgeRendering.visible = true; // Show the edges
+
+					bunny.visible = false;
+					bunnyEdgeRendering.visible = true;
+					break;
+
+				case 'e': // e = edge
+				// Toggle system. Upon toggling on, the edges are shown. Upon toggling off, the vertices are shown.
+					if (!edgeRendering.visible) { // If the edges aren't being shown,
+						edgeRendering.visible = true; // Show the edges
+						cube.visible = false; // Make the faces invisible
+						pointsRendering.visible = false; // Make the vertices invisible
+
+						bunnyEdgeRendering.visible = true;
+						bunny.visible = false;
+						bunnyPointsRendering.visible = false;
+						break;
+					}
+					edgeRendering.visible = false; // Otherwise, make the edges invisible
+					pointsRendering.visible = true; // Show the vertices
+
+					bunnyEdgeRendering.visible = false;
+					bunnyPointsRendering.visible = true;
+					break;
+
+				case 'v': // v = vertex
+				// Toggle system. Upon toggling on, only the vertices are shown. Upon toggling off, the faces are shown.
+					if (!pointsRendering.visible) { // If the vertices aren't being shown,
+						pointsRendering.visible = true; // Show the vertices
+						cube.visible = false; // Make the faces invisible
+						edgeRendering.visible = false; // Make the edges invisible
+
+						bunnyPointsRendering.visible = true;
+						bunny.visible = false;
+						bunnyEdgeRendering.visible = false;
+						break;
+					}
+					pointsRendering.visible = false; // Otherwise, make the vertices invisible
+					cube.visible = true; // Show the faces
+
+					bunnyPointsRendering.visible = false;
+					bunny.visible = true;
+					break;
+
+				// Translations, rotations and movement of the box
+				case 'x':
+					yRotate = 0;
+					zRotate = 0;
+					xRotate = 0.05;
+					break;
+
+				case 'y':
+					xRotate = 0;
+					zRotate = 0;
+					yRotate = 0.05;
+					break;
+
+				case 'z':
+					xRotate = 0;
+					yRotate = 0;
+					zRotate = 0.05;
+					break;
+
+				case 'ArrowLeft':
+					camera.translateX(-0.1);
+					break;
+
+				case 'ArrowRight':
+					camera.translateX(0.1);
+					break;
+
+				case 'ArrowUp':
+					camera.translateY(0.1);
+					break;
+
+				case 'ArrowDown':
+					camera.translateY(-0.1);
+					break;
+
+				case 'w':
+					camera.translateZ(-0.1);
+					break;
+
+				case 's':
+					camera.translateZ(0.1);
+					break;
+
+				case '4':
+					camera.translateX(-0.1);
+					camera.lookAt(cube.position);
+					break;
+
+				case '8':
+					camera.translateOnAxis(camera.up, 0.1);
+					camera.lookAt(cube.position);
+					break;
+
+				case '6':
+					camera.translateX(0.1);
+					camera.lookAt(cube.position);
+					break;
+
+				case '5':
+					camera.translateOnAxis(camera.up, -0.1);
+					camera.lookAt(cube.position);
+					break;
+
+				// Disco ball
+				case 'l':
+					discoBall = !discoBall;
+					if (!discoBall) {
+						window.alert("Disco mode disabled! See you later little bunny :(.");
+						scene.remove(littleBunny);
+						scene.remove(disco);
+						scene.remove(littleSphere1);
+						scene.remove(littleSphere2);
+						setCubeColours(0xffffff);
+						bunny.material.color.setHex(0xff00e4);
+						bunny.position.set(0, 0, 0);
+						bunny.geometry.center();
+						xRotate = 0; yRotate = 0; zRotate = 0;
+						cube.rotation.x = 0; cube.rotation.y = 0; cube.rotation.z = 0;
+						cube.scale.x = 1;
+						cube.scale.y = 1;
+						cube.scale.z = 1;
+						break;
+					}
+					window.alert("You've enabled disco mode! Welcome little bunny!");
+					littleBunny.position.set(0, 0, 0);
+					bunny.position.set(1, 0, 1);
+					scene.add(littleBunny);
+					scene.add(disco);
+					scene.add(littleSphere1);
+					scene.add(littleSphere2);
+					xRotate = 2;
+					yRotate = 2;
+					zRotate = 2;
+					cube.scale.x = 0.5;
+					cube.scale.y = 0.5;
+					cube.scale.z = 0.5;
+					break;
+				// Hidden disco ball feature
+				case 'm':
+					if (!discoBall) {
+						break;
+					}
+					discoBallColoured = !discoBallColoured;
+					if (discoBallColoured) {
+						xRotate = 2; yRotate = 2; zRotate = 2;
+						break;
+					}
+					xRotate = 0.1; yRotate = 0.1; zRotate = 0.1;
+					break;
+			}
+		}
+
+		function activateDiscoBall() { // Activate the disco feature
+			let randCol = defColours[Math.floor(Math.random()*7)];
+			if (!discoBallColoured) {
+				randCol = 0xffffff;
+			}
+			disco.material.color.setHex(randCol);
+			littleSphere1.material.color.setHex(randCol);
+			littleSphere2.material.color.setHex(randCol);
+			setCubeColours(randCol);
+			bunny.material.color.setHex(randCol);
+			littleBunny.material.color.setHex(randCol);
+			// Ensure that the little bunny is always in front of the bigger bunny.
+			if (bunny.position.x > 1) {
+				bunny.position.set(bunny.position.x, 0, bunny.position.z-1);
+				littleBunny.position.set(bunny.position.x-1, 0, bunny.position.z+1);
+			}
+			if (bunny.position.z > 1) {
+				bunny.position.set(bunny.position.x+1, 0, bunny.position.z);
+				littleBunny.position.set(bunny.position.x-1, 0, bunny.position.z+1);
+			}
+			if (bunny.position.x < -1) {
+				bunny.position.set(bunny.position.x, 0, bunny.position.z+1);
+				littleBunny.position.set(bunny.position.x-1, 0, bunny.position.z+1);
+			}
+			if (bunny.position.z < -1) {
+				bunny.position.set(bunny.position.x-1, 0, bunny.position.z);
+				littleBunny.position.set(bunny.position.x-1, 0, bunny.position.z+1);
+			}
+			else {
+				bunny.position.set(bunny.position.x+1, 0, bunny.position.z);
+				littleBunny.position.set(bunny.position.x-1, 0, bunny.position.z+1);
+			}
+		}
+
+		function setCubeColours(colour) { // Set the colour of the box
+			for (let i = 0; i < 6; i++) {
+				cube.material[i].color.setHex(colour);
+			}
+		}
+
+	</script>
+</body>
+
+</html>
