@@ -1,7 +1,6 @@
 ## Introduction
-This program is part of the second coursework for CM20219 - Fundamentals of Visual Computing.  
 The primary goal of this task is to be introduced to 3D graphics and manipulate them in practise.  
-In this program, I have implemented numerous features that cover the 10 requirements set for this part of the coursework.
+In this program, I have implemented numerous features to practise this concept.
 
 ## Primary features
 
